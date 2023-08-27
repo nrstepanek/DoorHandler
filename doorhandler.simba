@@ -1,0 +1,112 @@
+
+
+{$DEFINE WL_DOORHANDLER_INCLUDED}
+{$IFNDEF SRL_OSR}
+  {$I SRL-T/osr.simba}
+{$ENDIF}
+{$IFNDEF WL_OSR}
+  {$I WaspLib/osr.simba}
+{$ENDIF}
+
+
+type
+  EDoorType = (
+    DOOR,
+    GATE
+  );
+
+  DoorHandler = record(TSRLBaseRecord)
+    ClosedPoints: TPointArray;
+    OpenPoints: TPointArray;
+    RSW: TRSWalker;
+    DoorType: EDoorType;
+    DoorColor: TCTS2Color;
+  end;
+
+procedure DoorHandler.Setup(Name: String; DoorType: EDoorType; ClosedPoints, OpenPoints: TPointArray);
+begin
+  Self.RSW.Setup('world');
+  Self.Setup(Name, DoorType, ClosedPoints, OpenPoints, Self.RSW);
+end;
+
+procedure DoorHandler.Setup(Name: String; DoorType: EDoorType; ClosedPoints, OpenPoints: TPointArray; RSWalker: TRSWalker); overload;
+begin
+  Self.RSW := RSWalker;
+  Self.Name := Name;
+  Self.DoorType := DoorType;
+  Self.ClosedPoints := ClosedPoints;
+  Self.OpenPoints := OpenPoints;
+  Self.SetupDoorColor();
+end;
+
+procedure DoorHandler.SetupDoorColor();
+begin
+  case Self.DoorType of
+    DOOR: Self.DoorColor := CTS2(1, 10);
+    GATE: Self.DoorColor := CTS2(1065049, 10);
+  end;
+end;
+
+procedure DoorHandler.MoveMouseToDoor(Point1, Point2: TPoint);
+var
+  Point1MSMean: TPoint;
+  Point2MSMean: TPoint;
+  DoorMS: TPoint;
+begin
+  Point1MSMean := Self.RSW.GetTileMS(Point1).Mean();
+  Point2MSMean := Self.RSW.GetTileMS(Point2).Mean();
+  DoorMS := Point(Round((Point1MSMean.X + Point2MSMean.X) / 2), Round((Point1MSMean.Y + Point2MSMean.Y) / 2));
+  Mouse.Move(DoorMS);
+end;
+
+function DoorHandler.IsOpen(): Boolean;
+begin
+  Self.MoveMouseToDoor(OpenPoints[0], OpenPoints[1]);
+  if MainScreen.GetUpText().startsWith('Close') then Exit(True);
+  Exit(Self.HoneInOnDoor('Close'));
+end;
+
+function DoorHandler.HoneInOnDoor(ExpectedText: String): Boolean;
+var
+  DoorPoints: TPointArray;
+  SearchBox: TBox;
+  MousePos: TPoint;
+  Index: Int32;
+begin
+  Writeln('Honing in!');
+  MousePos := Mouse.Position();
+  // TODO: Search more/less based on zoom level.
+  SearchBox := Box(MousePos.x - 8, MousePos.y - 8, MousePos.x + 8, MousePos.y + 8);
+  SRL.FindColors(DoorPoints, Self.DoorColor, SearchBox);
+  Writeln(length(DoorPoints));
+  if length(DoorPoints) = 0 then Exit(False);
+  DoorPoints.Sort(MousePos);
+  Index := 0;
+  while not MainScreen.GetUpText().startsWith(ExpectedText) and (Index < length(DoorPoints)) do
+  begin
+    Writeln(Index);
+    Mouse.Move(DoorPoints[Index]);
+    Index := Index + 1;
+  end;
+  Exit(MainScreen.GetUpText().startsWith(ExpectedText));
+end;
+
+function DoorHandler.Open(): Boolean;
+begin
+  Self.MoveMouseToDoor(ClosedPoints[0], ClosedPoints[1]);
+  if MainScreen.GetUpText().startsWith('Open') then
+  begin
+    Mouse.Click(MOUSE_LEFT);
+    Minimap.WaitMoving(False);
+    Exit(True);
+  end;
+
+  if Self.HoneInOnDoor('Open') then
+  begin
+    Mouse.Click(MOUSE_LEFT);
+    Minimap.WaitMoving(False);
+    Exit(True);
+  end;
+  Exit(False);
+end;
+
