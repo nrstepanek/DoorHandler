@@ -66,6 +66,13 @@ begin
   Exit(Self.HoneInOnDoor('Close'));
 end;
 
+function DoorHandler.IsClosed(): Boolean;
+begin
+  Self.MoveMouseToDoor(ClosedPoints[0], ClosedPoints[1]);
+  if MainScreen.GetUpText().startsWith('Open') then Exit(True);
+  Exit(Self.HoneInOnDoor('Open'));
+end;
+
 function DoorHandler.HoneInOnDoor(ExpectedText: String): Boolean;
 var
   DoorPoints: TPointArray;
@@ -73,7 +80,6 @@ var
   MousePos: TPoint;
   Index: Int32;
 begin
-  Writeln('Honing in!');
   MousePos := Mouse.Position();
   // TODO: Search more/less based on zoom level.
   SearchBox := Box(MousePos.x - 8, MousePos.y - 8, MousePos.x + 8, MousePos.y + 8);
