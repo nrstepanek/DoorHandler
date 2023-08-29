@@ -12,7 +12,8 @@
 type
   EDoorType = (
     DOOR,
-    GATE
+    GATE,
+    GATE_2
   );
 
   DoorHandler = record(TSRLBaseRecord)
@@ -44,6 +45,7 @@ begin
   case Self.DoorType of
     DOOR: Self.DoorColor := CTS2(1, 10);
     GATE: Self.DoorColor := CTS2(1065049, 10);
+    GATE_2: Self.DoorColor := CTS2(6387845, 10);
   end;
 end;
 
@@ -84,13 +86,11 @@ begin
   // TODO: Search more/less based on zoom level.
   SearchBox := Box(MousePos.x - 8, MousePos.y - 8, MousePos.x + 8, MousePos.y + 8);
   SRL.FindColors(DoorPoints, Self.DoorColor, SearchBox);
-  Writeln(length(DoorPoints));
   if length(DoorPoints) = 0 then Exit(False);
   DoorPoints.Sort(MousePos);
   Index := 0;
   while not MainScreen.GetUpText().startsWith(ExpectedText) and (Index < length(DoorPoints)) do
   begin
-    Writeln(Index);
     Mouse.Move(DoorPoints[Index]);
     Index := Index + 1;
   end;
